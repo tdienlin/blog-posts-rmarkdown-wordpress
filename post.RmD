@@ -1,0 +1,149 @@
+---
+title: How to publish a blog post on WordPress using Rmarkdown
+author: Tobias Dienlin
+output: html_document
+---
+
+![(c)cc0, from pixabay.com](https://images.pexels.com/photos/261662/pexels-photo-261662.jpeg?auto=compress&cs=tinysrgb&h=750&w=1260)
+
+I like WordPress and I love Rmarkdown. So recently I've thought: With Rmarkdown I can easily produce HTMLs of analyses, research reports, or tutorials. My blog runs on WordPress. So instead of manually copying everything over to WordPress, wouldn't it be nice if I could automatically upload my Rmarkdown scripts to WordPress ... ?
+
+So I checked for existing solutions and, much to my surprise, it's possible! With this blogpost, I hence ... 
+
+1. want to share my joy that this option exists, 
+2. show you an example of how you can do it yourself, 
+3. mention some obstacles that I've wrestled with so that you don't have to.
+
+<!-- wp:more -->
+<!--more-->
+<!-- /wp:more -->
+
+## This is great!
+
+As [Heather Urry](https://twitter.com/HeatherUrry) has already written in her [post](http://sites.tufts.edu/emotiononthebrain/2017/08/12/blog-posting-from-r-markdown-to-wordpress/) on using Rmarkdown and WordPress, some people are simply amazing. In order to connect Rmarkdown and WordPress, [Duncan Temple Lang](https://twitter.com/duncantl) developed the R package `RWordPress` and [William Morris](https://twitter.com/wkmor1), [Yihui Xie](https://twitter.com/xieyihui), and [Jared Lander](https://twitter.com/@jaredlander) the `knit2wp` function in `knitr`. So thank you very much for making this possible!
+
+(In general, I think it's hard to underestimate the epistemic contribution of people such as [Frederik Aust](https://twitter.com/FrederikAust) (`papaja`), [Sascha Epskamp](https://twitter.com/SachaEpskamp) (`semPlot`), [Dominik Leiner](https://www.ls1.ifkw.uni-muenchen.de/personen/wiss_ma/leiner_dominik/index.html) (`soscisurvery`), [Michelle Nuijten](https://twitter.com/MicheleNuijten/) (`statcheck`), [Yves Rosseell](http://lavaan.ugent.be/) (`lavaan`), [Hadley Wickham](https://twitter.com/hadleywickham) (`tidyverse`), or [Yihui Xie](https://twitter.com/xieyihui) (`knitr`). These people have created software that is free-to-use, open source, and user-friendly. Their direct and indirect contribution is enormous. Which makes it even more heartbreaking that some software-developing academics are often not taken seriously, that their work is overlooked, or that their products are not considered to be of scientific value. This _has_ to change.)
+
+## Example
+
+It's straightforward: You only need to write you Rmarkdown file as you would normally do. Let's call this file "post.Rmd". You'd then create another file, for example called "publish.R". You run the code in the latter and, voila, your post is published!
+
+The `publish` file should include the following lines:
+
+```{r eval=F}
+if (!require('knitr')) {install.packages("knitr")}
+if (!require('devtools')) {install.packages("devtools")}
+if (!require('RWordPress')) {devtools::install_github(c("duncantl/XMLRPC", "duncantl/RWordPress"))}
+
+library(knitr); library(RWordPress)
+
+options(WordpressLogin = c(user = 'PASSWORD'),
+        WordpressURL = 'http://YOURWEBSITE.com/xmlrpc.php')
+
+knit2wp('post.RmD',
+        title = 'YOUR TITLE',
+        publish = FALSE,
+        action = "newPost")
+```
+
+First, you would set the parameter `action` to "newPost". You can later change this to "editPost". When editing your post, you would then need to add a `postid` (which you can find in your console after you've published the first version).
+
+I'm running WordPress on my own webspace. But several people might have a blog directly on wordpress.com. In this case, change `WordpressURL` to "http://YOURWEBSITE.wordpress.com/xmlrpc.php".
+
+You don't have to create a separate `publish.RmD` file. But it's a good idea if you're planning on uploading your code to a public repository such as github. You can then easily add that file to your .gitignore -- which makes much sense, because you probably don't want to share your password with the rest of the world.
+
+For an up and running example, you can see my latest blog post [What is statistical power? An illustration using simulated data](https://tobiasdienlin.com/2019/03/07/what-is-statistical-power-an-illustration-using-simulated-data/), which was written in Rmarkdown and then published in WordPress. You can find the code on my [github](https://github.com/tdienlin/power). Likewise, you can also find the code for this blogpost [online](https://github.com/tdienlin/blog-posts-rmarkdown-wordpress).
+
+###  Implement custom CSS/HTML
+
+Some things didn't work for me in the beginning. This meant including footnotes, the Read More feature of WordPress, or the embedding of external media. However, I've figured that it's easy to implement all that that as well!
+
+#### Footnotes
+
+In Rmarkdown, you'd implement footnotes as follows: 
+
+`Main text^[1] ^[1]: Footenote` 
+
+However, this doesn't work when exporting to WordPress. However, you can make it work by implementing custom snippets of CSS/HTML.[note]This is the proof.[/note] You only need to install a footnote plugin, in my case Easy Footnotes, and add the HTML code to your Rmarkdown file. For example like this:
+
+```{r eval=F}
+This is text.
+[Note]
+This is your footnote.
+[/Note]
+This is text.
+```
+
+#### Read More
+
+Next, in WordPress there's a Read More option. This feature enables that in the overview of all your blog posts, an individual blogsposts isn't shown completely, but only up to that mark. Obviously, that feature doesn't exist in Rmarkdown. But, again, you can implement it by adding the following lines of code to your Rmarkdown:
+
+```{r eval=F}
+<pre><code class="r">
+<!-- wp:more -->
+<!--more-->
+<!-- /wp:more -->
+</pre></code class="r">
+```
+
+#### Embed Media
+
+As you've gathered by now, the general idea is that you would need to find out how the HTML code for something looks like and then simply add it manually to your Rmarkdown file. This way, we can for example implement the WordPress style to embed external media:
+
+<!-- wp:core-embed/twitter {"url":"https://twitter.com/tdienlin/status/1103692112158212096?s=20","type":"rich","providerNameSlug":"twitter"} -->
+<figure class="wp-block-embed-twitter wp-block-embed is-type-rich is-provider-twitter"><div class="wp-block-embed__wrapper">
+https://twitter.com/tdienlin/status/1103692112158212096?s=20
+</div></figure>
+<!-- /wp:core-embed/twitter -->
+
+The source you'd need to use would be the following:
+
+```{r eval=F}
+<!-- wp:core-embed/twitter {"url":"https://twitter.com/tdienlin/status/1103692112158212096?s=20","type":"rich","providerNameSlug":"twitter"} -->
+<figure class="wp-block-embed-twitter wp-block-embed is-type-rich is-provider-twitter"><div class="wp-block-embed__wrapper">
+# https://twitter.com/tdienlin/status/1103692112158212096?s=20
+</div></figure>
+<!-- /wp:core-embed/twitter -->
+```
+
+Easy, right?
+
+One thing I haven't yet managed to get to work are references. If you know how, please let me know!
+
+## Trouble-Shooting
+
+Some things didn't work in the beginning. I had a hard time actually connecting to my WordPress server. The first problem was that several online tutorials simply featured wrong code. Pro tip: If you should have problems to connect, make sure that "WordpressLogin" and "WordpressURL" are spelled correctly!
+
+Next, as I'm hosting wordpress on an external server, I did not have the permission to open the "xmlrpc.php" file. It took me some time to find out how to change that. For me, the solution was to add the following lines of code to my .htaccess file:
+
+```{r eval=F}
+<FilesMatch "xmlrpc\.php$">
+Satisfy Any
+Allow from all
+</FilesMatch>
+```
+
+If you do that, it's important to also install the plugin "Disable XML-RPC Pingback", so that others cannot hack your page. If you should have the same problem and you cannot fix it, you might find an answer in one of these sites, which I found very helpful:
+
+- https://work.alonso.tv/xmlrpc-php-403-forbidden
+- https://nerd.steveferson.com/2008/03/23/solved-blog-xmlrpc-403-error/#.XHkrdIhKg-U
+- https://wordpress.org/plugins/disable-xml-rpc-pingback/
+- https://edbinx.com/wordpress/solve-jetpack-site-inaccessible-403-error-xmlrpc-php-wordpress-13210.html
+
+In general, for more information and examples, see the following pages:
+
+- https://yihui.name/knitr/demo/wordpress/
+- http://sites.tufts.edu/emotiononthebrain/2017/08/12/blog-posting-from-r-markdown-to-wordpress/
+- http://peter.baumgartner.name/2017/08/12/testpage-from-r-resp-knitr/
+- http://dwoll.de/rexrepos/posts/rerWorkflowWP.html
+- http://3.14a.ch/archives/2015/03/08/how-to-publish-with-r-markdown-in-wordpress/
+
+Happy blogging!
+
+## Like this post on social media
+
+<!-- wp:core-embed/twitter {"url":"https://twitter.com/tdienlin/status/1104028587085185026?s=20","type":"rich","providerNameSlug":"twitter"} -->
+<figure class="wp-block-embed-twitter wp-block-embed is-type-rich is-provider-twitter"><div class="wp-block-embed__wrapper">
+https://twitter.com/tdienlin/status/1104028587085185026?s=20
+</div></figure>
+<!-- /wp:core-embed/twitter -->
